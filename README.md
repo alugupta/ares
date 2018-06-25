@@ -10,21 +10,21 @@ This repository supports the training, optimization, and evaluation of the follo
 5. ImageNet-VGG16     ( VGG16 convolutional network, ImageNet dataset          )
 6. ImageNet-ResNet50  ( ResNet50 convolutional network, ImageNet dataset       )
 
-Follow the structure in `ares/dl_models/models/` to modify the model architectures or build additional models.
+Follow the structure in [`ares/dl_models/models/`](./dl_models/models/) to modify the model architectures or build additional models.
 
 ## Getting started
-To get started quickly, you can run simple training and testing examples using the various configurations in `ares/run_models.py`, and some examples are provided in `ares/run.sh`.
+To get started quickly, you can run simple training and testing examples using the various configurations in [`ares/run_models.py`](./run_models.py), and some examples are provided in [`ares/run.sh`](./run.sh).
 In order to run the script and experiments you will need to create `cache` and `results` directories (e.g., `ares/cache` and `ares/results`) where models weight and generated results (i.e., plots) are stored respectively.
 Please add the appropriate paths to `ares/conf` as well.
 
 ## Ares Experiments
-The experiments in `ares/experiments` are provided to perform the fault-injection analyses found in Ares.
-We provide examples for how to train, evaluate, quantize, and inject faults in models under `ares/experiments/train`, `ares/experiments/evaluate`, `ares/experiments/quantize`, and `ares/experiments/bits`.
+The experiments in [`ares/experiments`](./experiments) are provided to perform the fault-injection analyses found in Ares.
+We provide examples for how to train, evaluate, quantize, and inject faults in models under [`ares/experiments/train`](./experiments/train), [`ares/experiments/eval`](./experiments/evaluate), [`ares/experiments/quantize`](./experiments/quantize), and [`ares/experiments/bits`](./experiments/bits).
 
 Before running each of the experiments, add the Ares' root directory to your `PYTONPATH` as follows: `export PYTHONPATH=<path-to-ares>/:$PYTOHNPATH`.
 
 ### Training
-Examples of training models can be found in `ares/experiments/train/train.sh`.
+Examples of training models can be found in [`ares/experiments/train/train.sh`](./experiments/train/train.sh).
 
 The MNIST and CiFAR datasets are made available through the Keras deep learning framework.
 [TIDIGITs](https://catalog.ldc.upenn.edu/ldc93s10) and [ImageNet](http://www.image-net.org/) must be downloaded and pre-processed separately, however pre-trained models for ImageNet (e.g., VGG16, ResNet50) are available through Keras as well.
@@ -38,6 +38,13 @@ The [quantization transform](./dl_models/transform/quantize.py) emulates fixed-p
 After training and quantizing models, `ares/experiments/eval/eval.sh` can be used to evaluate the models on the validation and test sets.
 
 ### Fault-injection
+The [`ares/experiments/bits/bits.py`](./experiments/bits/bits.py) experiment implements the core fault-injection framework of Ares.
+We illustrate an example of how to inject static persistent faults in the weights for the models.
+The transform for random fault injection is implemented in [`ares/dl_models/transform/random_fault.py`](./dl_models/transform/random_fault.py).
+Examples of running the fault injection framework can be found in [`ares/experiments/bits/run.sh`](./experiments/bits/run.sh).
+
+Examples of how to inject faults into activations will be provided shortly. 
+In the meantime, please contact us if you have questions regarding this. 
 
 ## Link to paper
 Visit ACM's digital library to read the [full paper](https://dl.acm.org/citation.cfm?id=3195997).
