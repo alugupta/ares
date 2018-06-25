@@ -32,7 +32,7 @@ The MNIST and CiFAR datasets are made available through the Keras deep learning 
 ### Quantization
 To quantize models, run [`ares/experiments/quantize/run.sh`](./experiments/quantize/run.sh).
 
-The [quantization transform](./dl-models/transform/quantize.py) emulates fixed-point datatypes for weights. Note that activations and arithmetic operations still have full-precision.
+The [quantization transform](./dl_models/transform/quantize.py) emulates fixed-point datatypes for weights. Note that activations and arithmetic operations still have full-precision.
 
 ### Evaluation
 After training and quantizing models, `ares/experiments/eval/eval.sh` can be used to evaluate the models on the validation and test sets.
