@@ -39,6 +39,7 @@ class tidigitsRNN(ModelBase):
 
     self.timesteps = 254
     self.features  = 39
+    self.tidigits_dataset_path = '/group/brooks/dl_models/tidigits/data/tidigits.hdf5'
 
   def build_model(self,):
     model = Sequential()
@@ -114,9 +115,10 @@ class tidigitsRNN(ModelBase):
 
   def load_dataset(self, ):
     try:
-      tidigits, ti_train, ti_test = self.read_tidigits('./tidigits.hdf5')
+      tidigits, ti_train, ti_test = self.read_tidigits(self.tidigits_dataset_path)
     except:
       print "Could not locate TIDIGITS dataset!"
+      print "Please set the correct path to the pre-processed dataset in 'ares/dl_models/models/tidigits/tidigts_rnn.py'"
       print "TIDIGITS dataset must be purchased and pre-processed into hdf5 file"
       sys.exit(1)
 
