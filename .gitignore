@@ -1,0 +1,10 @@
+*.pyc
+*.hdf5
+*.swp
+*.swo
+cache/
+results/
+
+experiments/train/trained_models/
+
+
