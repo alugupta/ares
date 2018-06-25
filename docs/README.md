@@ -1,7 +1,11 @@
 # Ares: A framework for quantifying the resilience of deep neural networks
 
-## Contact Us
-For any further questions please contact <harvard.vlsiarch.ares@gmail.com>
+## Abstract
+As the use of deep neural networks continues to grow, so does the fraction of compute cycles devoted to their execution. This has led the CAD and architecture communities to devote considerable attention to building DNN hardware. Despite these efforts, the fault tolerance of DNNs has generally been overlooked. This paper is the first to conduct a large-scale, empirical study of DNN resilience. Motivated by the inherent algorithmic resilience of DNNs, we are interested in understanding the relationship between fault rate and model accuracy. To do so, we present Ares: a light-weight, DNN-specific fault injection framework validated within 12% of real hardware. We find that DNN fault tolerance varies by orders of magnitude with respect to model, layer type, and structure.
+
+## Link to paper
+Visit ACM's digital library to read the [full paper](https://dl.acm.org/citation.cfm?id=3195997).
+
 
 ## Citation
 If you use `Ares`, please cite us:
@@ -24,3 +28,5 @@ publisher = {ACM},
 address = {New York, NY, USA},}
 ```
 
+## Contact Us
+For any further questions please contact <harvard.vlsiarch.ares@gmail.com>
