@@ -17,7 +17,7 @@ If you use `Ares`, please cite us:
 > pages = {17:1--17:6},\
 > articleno = {17},\
 > numpages = {6},\
-> url = {http://doi.acm.org/10.1145/3195970.3195997},\
+> url = {http://doi.acm.org/10.1145/3195970.3195997}, \
 > doi = {10.1145/3195970.3195997},\
 > acmid = {3195997},\
 > publisher = {ACM},\
