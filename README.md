@@ -7,27 +7,31 @@ This repository supports the training, optimization, and evaluation of the follo
 2. MNIST-LeNet5       ( Two convolutional layers, two FC layers, MNIST dataset )
 3. TIDIGITS-X         ( Simple RNN, GRU, and LSTM networks, TIDIGITS dataset   )
 4. CiFar10-VGG        ( VGG-esque convolutional network, CiFar10 dataset       )
-5. ImageNet-VGG16     ( VGG16 convolutional network, ImageNet dataset          )
-6. ImageNet-ResNet50  ( ResNet50 convolutional network, ImageNet dataset       )
+5. CiFar10-AlexNet
+6. ImageNet-VGG16     ( VGG16 convolutional network, ImageNet dataset          )
+7. ImageNet-ResNet50  ( ResNet50 convolutional network, ImageNet dataset       )
+8. ImageNet-IncenptionV3
+9. ImageNet-MobileNet
 
 Follow the structure in [`ares/dl_models/models/`](./dl_models/models/) to modify the model architectures or build additional models.
 
 ## Getting started
 To get started quickly, you can run simple training and testing examples using the various configurations in [`ares/run_models.py`](./run_models.py), and some examples are provided in [`ares/run.sh`](./run.sh).
-In order to run the script and experiments you will need to create `cache` and `results` directories (e.g., `ares/cache` and `ares/results`) where models weight and generated results (i.e., plots) are stored respectively.
-Please add the appropriate paths to `ares/conf` as well.
+You may need to edit the run_experiment.sh file to correctly configure paths to imagenet and other external data.
+A docker script to create the correct path structure and run the tools is provided. Run [`ares/run_experiement.sh`](./run_experiment.sh)
 
 ## Ares Experiments
 The experiments in [`ares/experiments`](./experiments) are provided to perform the fault-injection analyses found in Ares.
 We provide examples for how to train, evaluate, quantize, and inject faults in models under [`ares/experiments/train`](./experiments/train), [`ares/experiments/eval`](./experiments/evaluate), [`ares/experiments/quantize`](./experiments/quantize), and [`ares/experiments/bits`](./experiments/bits).
 
 Before running each of the experiments, add the Ares' root directory to your `PYTONPATH` as follows: `export PYTHONPATH=<path-to-ares>/:$PYTOHNPATH`.
+In addition, for tidigits and imagenet, edit imagenet_base.py, run_experiment.py and/or tidigits_utils.py to make sure the data filepaths are correct. For imagenet, ares assumes the train and test set are stored one 256 batch per file, with the labels stored as a numpy array.
 
 ### Training
 Examples of training models can be found in [`ares/experiments/train/train.sh`](./experiments/train/train.sh).
 
 The MNIST and CiFAR datasets are made available through the Keras deep learning framework.
-[TIDIGITs](https://catalog.ldc.upenn.edu/ldc93s10) and [ImageNet](http://www.image-net.org/) must be downloaded and pre-processed separately, however pre-trained models for ImageNet (e.g., VGG16, ResNet50) are available through Keras as well.
+[TIDIGITs](https://catalog.ldc.upenn.edu/ldc93s10) and [ImageNet](http://www.image-net.org/) must be downloaded and pre-processed separately, however pre-trained models for ImageNet (e.g., VGG16, ResNet50) are available through Pytorch and will be automatically downloaded by the framework.
 
 ### Quantization
 To quantize models, run [`ares/experiments/quantize/run.sh`](./experiments/quantize/run.sh).

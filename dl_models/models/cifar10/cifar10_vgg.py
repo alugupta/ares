@@ -1,164 +1,95 @@
-from keras import backend as K
-from keras.datasets import cifar10
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten, Convolution2D, MaxPooling2D, ZeroPadding2D, BatchNormalization
-from keras.utils import np_utils
-from keras.regularizers import l2
-from keras import backend
 import operator as op
-
-from keras.callbacks import ModelCheckpoint
-
-from keras.preprocessing.image import ImageDataGenerator
-
-from keras.constraints import maxnorm
-from keras.optimizers import SGD
-
-import keras
 
 from dl_models.models.base import *
 import sys
+from functools import reduce
+
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+
+cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M']
+#ADAPTED FROM https://github.com/chengyangfu/pytorch-vgg-cifar10
+class cifarVGGPT(nn.Module):
+    def __init__(self):
+        super(cifarPT, self).__init__()
+        self.features = self._make_layers(cfg)
+        self.class1 = nn.Linear(2048, 512)
+        self.class2 = nn.Linear(512, 10)
+
+    def forward(self, x):
+        out = self.features(x)
+        out = out.view(out.size(0), -1)
+        out = self.class2(F.relu(self.class1(out)))
+        return out
+
+    def _make_layers(self, cfg):
+        layers = []
+        in_channels = 3
+        for x in cfg:
+            if x == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                           nn.BatchNorm2d(x), nn.ReLU(inplace=True)]
+                in_channels = x
+        layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
+        return nn.Sequential(*layers)
 
 class cifar10VGG(ModelBase):
   def __init__(self):
     super(cifar10VGG,self).__init__('cifar','CiFar10VGG')
-
-    # Conv layer params
-    self.batch_size = 128
-    self.num_epochs = 1
-
-    # in dimensions
-    self.nb_classes  = 10
-    self.img_rows    = 32
-    self.img_cols    = 32
-    self.channels    = 3
-    self.nb_filters  = 32
-    self.pool_size   = (2, 2)
-    self.kernel_size = (3, 3)
-
-    self.input_shape = (self.channels, self.img_rows, self.img_cols)
-
     self.layer_ids             = []
     self.default_prune_factors = []
 
-  def preprocess_categorical(self, xs, ys, yclasses=2, dtype='float32'):
-    new_xs = []
-    for x in xs:
-      # Flatten, convert dtype, and standardize
-      x = x.reshape((x.shape[0],reduce(op.mul,x.shape[1:])))
-      x = x.astype('float32')
-      (mu,sig) = (np.mean(x,axis=1,keepdims=True), np.std(x,axis=1,keepdims=True))
-      x = (x-mu)/sig
-      new_xs.append(x)
-    new_ys = []
-    for y in ys:
-      # Convert categorical labels to binary (1-hot) encoding
-      y = np_utils.to_categorical(y, yclasses)
-      new_ys.append(y)
-    return zip(new_xs, new_ys)
+    self.l2 = .1
+    self.lr = 5e-4
+    
+  def fit_model(self, batch_size=128, v=0): #Override for LR decay  #TODO: CHECKW
+    self.lr = .1
+    self.model.train()
+    trainloader = torch.utils.data.DataLoader(self.traindata, batch_size=batch_size, shuffle=True, num_workers=4)
+    self.model.to(self.device)
+    for e in range(self.num_epochs):
+        print("Training epoch " + str(e))
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data[0].to(self.device), data[1].to(self.device)
+
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+            loss = self.criterion(outputs, labels)
+            loss.backward()
+            self.optimizer.step()
+        if e % 60 == 0 and e > 0:
+            self.lr /= 10
+            print(self.test_model())
+            self.optimizer = optim.SGD(self.model.parameters(), lr = self.lr, weight_decay = self.l2, momentum=0.9, nesterov=True)
 
   def load_dataset(self, ):
-    (training, testing) = cifar10.load_data()
-    ((x_train, y_train),(x_test, y_test)) = self.preprocess_categorical(*zip(training, testing), yclasses=10)
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
-    if backend.image_dim_ordering() == 'th':
-      print('Using TH')
-      x_train = x_train.reshape(x_train.shape[0], 3, self.img_rows, self.img_cols)
-      x_test = x_test.reshape(x_test.shape[0], 3, self.img_rows, self.img_cols)
-      self.input_shape = (3, self.img_rows, self.img_cols)
-    else:
-      print('Using TF')
-      x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, 3)
-      x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, 3)
-      self.input_shape = (self.img_rows, self.img_cols, 3)
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,download=True, transform=transform_train)
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False,download=True, transform=transform_test)
+    self.set_data(trainset, testset, testset)
 
-    print('x_train shape is:', x_train.shape)
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
+  def compile_model(self, loss='categorical_crossentropy', optimizer='sgd', metrics=None):
+    super().compile_model(loss, optimizer, metrics)
 
-    self.set_data(x_train, y_train, x_test, y_test, x_test, y_test)
+  def build_model(self,faults=[]):
+    module = cifarVGGPT()
+    self.set_model(module, self.layer_ids, self.default_prune_factors)
 
-  def build_model(self, faults=[]):
-    self.l1 = 0.00001
-    self.l2 = 5e-4
-    model = Sequential()
+    
 
-    input_shape = (None,) + self.input_shape
-
-    def ConvBNRelu ( n_kernels ):
-      model.add(Convolution2D(n_kernels, (3, 3), padding='same', activation=lambda x: K.relu(x) ))
-
-    model.add(Convolution2D(64, 3, 3, batch_input_shape=input_shape))
-    model.add(Activation('relu'))
-    ConvBNRelu(64)
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-    ConvBNRelu(128)
-    #model.add(Dropout(0.4))
-    ConvBNRelu(128)
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-    ConvBNRelu(256)
-    #model.add(Dropout(0.4))
-    ConvBNRelu(256)
-    #model.add(Dropout(0.4))
-    ConvBNRelu(256)
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-    ConvBNRelu(512)
-    #model.add(Dropout(0.4))
-    ConvBNRelu(512)
-    #model.add(Dropout(0.4))
-    ConvBNRelu(512)
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-    model.add(Flatten())
-    #model.add(Dropout(0.5))
-    model.add(Dense(512, W_regularizer=l2(self.l2), activation=lambda x:K.relu(x)))
-    #model.add(Activation('relu'))
-    #model.add(Dropout(0.5))
-    model.add(Dense(self.nb_classes, W_regularizer=l2(self.l2)))
-    model.add(Activation('softmax'))
-
-    self.set_model( model, self.layer_ids, self.default_prune_factors )
-
-  def fit_model(self, batch_size=256, v=0):
-    file_path = self.cache_dir + "/cifar10_torch_improvement_{epoch:03d}_{val_acc:.2f}.hdf5"
-
-    checkpoint = ModelCheckpoint(file_path, monitor='val_acc', verbose=1, save_best_only = True, mode='max')
-
-    callbacks_list = [ checkpoint ]
-
-    datagen = ImageDataGenerator(
-                featurewise_center=False,
-                samplewise_center=False,
-                featurewise_std_normalization=False,
-                samplewise_std_normalization=False,
-                zca_whitening=False,
-                rotation_range=0,
-                width_shift_range=0.1,
-                height_shift_range=0.1,
-                horizontal_flip=True,
-                vertical_flip=False)
-
-    # Compute quantities required for feature-wise normalization
-    # (std, mean, and principal components if ZCA whitening is applied).
-    datagen.fit(self.x_train)
-
-    # Fit the model on the batches generated by datagen.flow().
-    self.model.fit_generator(datagen.flow(self.x_train, self.y_train,
-                    batch_size=batch_size),
-                    steps_per_epoch=self.x_train.shape[0] // batch_size,
-                    epochs=self.num_epochs,
-                    validation_data=(self.x_val, self.y_val),
-                    callbacks=callbacks_list)
-
-  def compile_model(self, loss='categorical_crossentropy', optimizer='rms', lr = 0.0001, metrics=None):
-    if metrics is None:
-      metrics=['accuracy']
-    rms = keras.optimizers.rmsprop(lr = lr, decay=1e-6)
-    self.model.compile(loss=loss, optimizer=rms, metrics=metrics)
 

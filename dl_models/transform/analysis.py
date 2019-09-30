@@ -1,5 +1,5 @@
+import torch
 import numpy as np
-
 from dl_models.transform import ModelTransform
 
 class SummarizeSparsity(ModelTransform):
@@ -16,16 +16,17 @@ class SummarizeSparsity(ModelTransform):
     '''Returns the fraction of nonzeros in weight matrices'''
     self.summary = []
     def sparsity(w):
-      self.total_weights += w.size
-      self.total_nonzero += np.count_nonzero(w)
+      self.total_weights += w.numel()
+      nz = (w != 0).sum().item()
+      self.total_nonzero += nz    
       if self.mode=='fraction':
-        c = np.count_nonzero(w)/float(w.size)
+        c = nz/w.numel()
       elif self.mode=='count':
-        c = np.count_nonzero(w)
+        c = nz
       elif self.mode=='both':
-        c = ( np.count_nonzero(w)/float(w.size),
-              np.count_nonzero(w) )
-      self.summary.append(c)
+        c = ( nz/w.numel(),nz )
+      self.summary.append(c)    
+
       return w
     return self.transform_weights(model,sparsity)
 
@@ -41,7 +42,7 @@ class SummarizeDistribution(ModelTransform):
     '''Returns the mean and std dev of weight matrices'''
     self.summary = []
     def distrib(w):
-      self.summary.append( (np.mean(w),np.std(w)) )
+      self.summary.append( (torch.mean(w).item(),torch.std(w).item()) )
       return w
     return self.transform_weights(model,distrib)
 

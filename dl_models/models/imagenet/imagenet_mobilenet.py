@@ -19,27 +19,24 @@ import random
 import sys
 import numpy
 
-class imagenetVGG16(imagenetBase):
+class imagenetMobileNet(imagenetBase):
   def __init__(self):
-    super(imagenetVGG16,self).__init__('imagenet','vgg16')
+    super(imagenetMobileNet,self).__init__('imagenet','mobilenet')
 
     self.param_layer_ids = []
     self.default_prune_factors = []
 
-    self.lr = 0.0001
+    self.lr = .0001 
     self.l2 = 1e-6
 
 
   def build_model(self, pretrained = True):
     self.pretrained = pretrained
-    model = models.vgg16(pretrained=pretrained)
-    self.set_model( model, self.param_layer_ids, self.default_prune_factors )
-
+    model = models.MobileNetV2(pretrained=pretrained)
+    self.set_model(model, self.param_layer_ids, self.default_prune_factors)
 
   # overriding compile_model from base as loss should be mse and
   # optimizer sgd (work slightly better)
-  def compile_model(self, loss='categorical_crossentropy', optimizer='sgd', metrics=None):
+  def compile_model(self, loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy','t5']):
     super().compile_model(loss=loss,optimizer=optimizer,metrics=metrics)
-
-
 

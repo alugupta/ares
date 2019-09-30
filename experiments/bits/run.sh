@@ -2,10 +2,10 @@
 mkdir -p logs
 mkdir -p logs/cifar10
 mkdir -p logs/mnist_fc
-TRAINED_MODELS_DIR="/group/vlsiarch/ugupta/git/ares/ares/experiments/quantize/quantized_weights/"
+TRAINED_MODELS_DIR="/ares/quantized_weights"
 
 SEED=0
-FRATE=0.00002
+FRATE=0.00005
 
 fname="mnist_quantized_2_8_($FRATE)_$SEED"
-THEANO_FLAGS='device=gpu' python bits.py -m mnist_fc -lw -qi 2 -qf 8 -ld_name $TRAINED_MODELS_DIR/mnist_fc_quantized_2_8 -frate $FRATE -seed $SEED | tee -a logs/mnist_fc/$fname
+THEANO_FLAGS='device=gpu' python /ares/experiments/bits/bits.py -c /ares/conf -m mnist_fc -lw -qi 2 -qf 6 -ld_name $TRAINED_MODELS_DIR/mnist_fc_quantized_2_6 -frate $FRATE -seed $SEED | tee -a logs/mnist_fc/$fname

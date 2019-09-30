@@ -1,16 +1,19 @@
 '''Routines for transforming model weights.'''
 
-from transform import ModelTransform
+from .transform import ModelTransform
 
 # Generic weight manipulation
-from retraining import Retraining
+from .retraining import Retraining
 
-from quantize import Quantize
+from .quantize import Quantize
 
-from random_fault import RandomFault
+from .random_fault import RandomFault
+
+from .injection import ActivationFault
+
 
 # Read-only Analysis
-from analysis import SummarizeSparsity, SummarizeDistribution
+from .analysis import SummarizeSparsity, SummarizeDistribution
 
 # For 'from dl_models.transform import *'
 __all__=[
@@ -19,4 +22,5 @@ __all__=[
   'RandomFault',
   'SummarizeSparsity',
   'SummarizeDistribution',
+  'ActivationFault'
 ]

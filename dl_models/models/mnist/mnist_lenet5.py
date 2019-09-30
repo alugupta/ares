@@ -1,91 +1,56 @@
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten, Convolution2D, MaxPooling2D
-from keras.utils import np_utils
-from keras import backend
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+
 import operator as op
 
 from dl_models.models.base import *
+from functools import reduce
+
+class mnistLenet5PT(nn.Module):
+    def __init__(self):
+        super(mnistLenet5PT, self).__init__()
+        self.nb_classes = 10
+        self.nb_filters = 32
+        
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=self.nb_filters, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=self.nb_filters, out_channels=self.nb_filters, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Dropout(p=.25),
+            nn.MaxPool2d(kernel_size=2))
+
+        self.fc1 = nn.Linear(4608, 128)
+        self.fc2 = nn.Linear(128, self.nb_classes)
+        self.drop = nn.Dropout(p=.5)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(-1,4608)
+        x = self.drop(F.relu(self.fc1(x)))
+        return F.softmax(self.fc2(x), 1)
+
 
 class mnistLenet5(ModelBase):
   def __init__(self):
-    super(mnistLenet5,self).__init__('mnist','fc')
+    super(mnistLenet5,self).__init__('mnist','lenet5')
 
-    # Conv layer params
-    self.batch_size = 128
-    self.nb_epoch = 3
-
-    # in dimensions
-    self.nb_classes = 10
-    self.img_rows = 28
-    self.img_cols = 28
-    self.nb_filters = 32
-    self.pool_size = (2, 2)
-    self.kernel_size = (3, 3)
-
-    self.input_shape = self.img_rows * self.img_cols
     self.layer_ids             = ['Conv', 'Bias', 'Conv', 'Bias', 'Dense', 'Bias', 'Dense', 'Bias']
     self.default_prune_factors = ['0.001','0.001','0.001','0.001','0.001', '0.001','0.001', '0.001']
 
-  def preprocess_categorical(self, xs, ys, yclasses=2, dtype='float32'):
-    new_xs = []
-    for x in xs:
-      # Flatten, convert dtype, and standardize
-      x = x.reshape((x.shape[0],reduce(op.mul,x.shape[1:])))
-      x = x.astype('float32')
-      (mu,sig) = (np.mean(x,axis=1,keepdims=True), np.std(x,axis=1,keepdims=True))
-      x = (x-mu)/sig
-      new_xs.append(x)
-    new_ys = []
-    for y in ys:
-      # Convert categorical labels to binary (1-hot) encoding
-      y = np_utils.to_categorical(y, yclasses)
-      new_ys.append(y)
-    return zip(new_xs, new_ys)
+    self.l2 = 0.00001  
 
+    
   def load_dataset(self, ):
-    #(x_train, y_train), (x_test, y_test) = mnist.load_data()
-    (training, testing) = mnist.load_data()
-    ((x_train, y_train),(x_test, y_test)) = self.preprocess_categorical(*zip(training, testing), yclasses=10)
-
-    if backend.image_dim_ordering() == 'th':
-      print('Using TH')
-      x_train = x_train.reshape(x_train.shape[0], 1, self.img_rows, self.img_cols)
-      x_test = x_test.reshape(x_test.shape[0], 1, self.img_rows, self.img_cols)
-      self.input_shape = (1, self.img_rows, self.img_cols)
-    else:
-      print('Using TF')
-      x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, 1)
-      x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, 1)
-      self.input_shape = (self.img_rows, self.img_cols, 1)
-
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-
-    print('x_train shape is:', x_train.shape)
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
-
-    self.set_data(x_train, y_train, x_test, y_test, x_test, y_test)
+    transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,))])
+    trainset = torchvision.datasets.MNIST(root='./data',train=True,download=True,transform=transform)
+    testset = torchvision.datasets.MNIST(root='./data',train=False,download=True,transform=transform)
+    self.set_data(trainset, testset, testset)
 
   def build_model(self,):
-    model = Sequential()
+    module = mnistLenet5PT()
+    self.set_model(module, self.layer_ids, self.default_prune_factors)
 
-    model.add(Convolution2D(self.nb_filters, self.kernel_size[0], self.kernel_size[1],
-                              border_mode='valid', input_shape=self.input_shape))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(self.nb_filters, self.kernel_size[0], self.kernel_size[1]))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=self.pool_size))
-    model.add(Dropout(0.25))
-
-    model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-
-    model.add(Dense(self.nb_classes))
-    model.add(Activation('softmax'))
-
-    self.set_model( model, self.layer_ids, self.default_prune_factors )
 

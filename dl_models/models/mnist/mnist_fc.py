@@ -1,80 +1,53 @@
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers.core import Dense, Activation
-from keras.layers.advanced_activations import ThresholdedReLU as TReLU
-from keras.regularizers import l2
-from keras.utils import np_utils
-from keras import backend
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+import numpy as np
+
 
 import operator as op
 
 from dl_models.models.base import *
 
+from functools import reduce
+
+class mnistFCPT(nn.Module, ):
+        def __init__(self):
+            super(mnistFCPT, self).__init__()
+            self.nb_classes = 10
+            self.img_rows = 28
+            self.img_cols = 28
+            
+            self.classifier = nn.Sequential(
+                nn.Linear(self.img_rows*self.img_cols, 300),
+                nn.ReLU(),
+                nn.Linear(300, 100),
+                nn.ReLU(),
+                nn.Linear(100, self.nb_classes))
+
+        def forward(self, x):
+            x = x.view(-1, self.img_rows*self.img_cols)
+            x = self.classifier(x)
+            return F.softmax(x,dim=1)
+
 class mnistFC(ModelBase):
+
   def __init__(self):
-    super(mnistFC,self).__init__('mnist','fc')
+    super(mnistFC, self).__init__('mnist', 'fc')  
+    self.param_layer_ids             = ['Dense', 'Bias', 'Dense', 'Bias', 'Dense', 'Bias']
+    self.default_prune_factors = ['0.001','0.001','0.001','0.001','0.001', '0.001']
+    self.relu_threshold = 0.0  # Default off
+    self.l2 = .00001
 
-    # Conv layer params
-    self.batch_size = 128
+  def load_dataset(self, ):  
+    transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,))])
+    trainset = torchvision.datasets.MNIST(root='./data',train=True,download=True,transform=transform)
+    testset = torchvision.datasets.MNIST(root='./data',train=False,download=True,transform=transform)
+    self.set_data(trainset, testset, testset)
 
-    # in dimensions
-    self.nb_classes = 10
-    self.img_rows = 28
-    self.img_cols = 28
+  def build_model(self,):   
+    module = mnistFCPT()
+    self.set_model(module, self.param_layer_ids, self.default_prune_factors)
 
-    self.input_shape = self.img_rows * self.img_cols
-    self.param_layer_ids       = ['Dense', 'Bias', 'Dense', 'Bias', 'Dense', 'Bias']
-    self.default_prune_factors = ['0.001', '0.001','0.001', '0.001','0.001', '0.001']
 
-    self.l1 = 0.00001
-    self.l2 = 0.00001
-
-    self.relu_threshold = 0.0 # Default off
-
-  def preprocess_categorical(self, xs, ys, yclasses=2, dtype='float32'):
-    new_xs = []
-    for x in xs:
-      # Flatten, convert dtype, and standardize
-      x = x.reshape((x.shape[0],reduce(op.mul,x.shape[1:])))
-      x = x.astype('float32')
-      (mu,sig) = (np.mean(x,axis=1,keepdims=True), np.std(x,axis=1,keepdims=True))
-      x = (x-mu)/sig
-      new_xs.append(x)
-    new_ys = []
-    for y in ys:
-      # Convert categorical labels to binary (1-hot) encoding
-      y = np_utils.to_categorical(y, yclasses)
-      new_ys.append(y)
-    return zip(new_xs, new_ys)
-
-  def load_dataset(self, ):
-    (training, testing) = mnist.load_data()
-    ((x_train, y_train),(x_test, y_test)) = self.preprocess_categorical(*zip(training, testing), yclasses=10)
-
-    if backend.image_dim_ordering() == 'th':
-      print('Using TH')
-      x_train = x_train.reshape(x_train.shape[0], self.input_shape)
-      x_test = x_test.reshape(x_test.shape[0], self.input_shape)
-    else:
-      print('Using TF')
-      x_train = x_train.reshape(x_train.shape[0], self.input_shape)
-      x_test = x_test.reshape(x_test.shape[0], self.input_shape)
-
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-
-    self.set_data(x_train, y_train, x_test, y_test, x_test, y_test)
-
-  def build_model(self,):
-    model = Sequential()
-
-    model.add(Dense(300, input_shape=(784,), W_regularizer=l2(self.l2)))
-    model.add(Activation('relu'))
-    model.add(Dense(100, W_regularizer=l2(self.l2)))
-
-    model.add(Activation('relu'))
-    model.add(Dense(self.nb_classes, W_regularizer=l2(self.l2)))
-
-    model.add(Activation('softmax'))
-    self.set_model( model, self.param_layer_ids, self.default_prune_factors )
 

@@ -6,11 +6,6 @@ import hickle
 import copy
 import random
 
-from keras.layers import Dense
-from keras.models import load_model
-from keras import backend as K
-
-from dl_models.models.model_configs import *
 from dl_models.models.base import *
 
 from dl_models.models import mnistFC
@@ -18,9 +13,12 @@ from dl_models.models import mnistLenet5
 from dl_models.models import svhnLenet5
 from dl_models.models import imagenetVGG16
 from dl_models.models import imagenetResNet50
+from dl_models.models import imagenetInceptionv3
 from dl_models.models import cifar10VGG
-
 from dl_models.models import tidigitsGRU
+from dl_models.models import tidigitsRNN
+from dl_models.models import tidigitsLSTM
+from dl_models.models import cifar10alexnet
 
 model_class_map = {
                    'mnist_lenet5'      : mnistLenet5,
@@ -30,6 +28,10 @@ model_class_map = {
                    'imagenet_resnet50' : imagenetResNet50,
                    'cifar10_vgg'       : cifar10VGG,
                    'tidigits_gru'      : tidigitsGRU,
+                   'tidigits_rnn'      : tidigitsRNN,
+                   'tidigits_lstm'      : tidigitsLSTM,
+                   'imagenet_inceptionv3' : imagenetInceptionv3,
+                   'cifar10_alexnet'   : cifar10alexnet,
                   }
 
 def cli():
@@ -51,8 +53,6 @@ def cli():
   parser.add_argument('-seed', '--seed', default=0xdeadbeef, type=int, help='Random seed for bit-level fault injector')
   parser.add_argument('-frate', '--frate', default=0.0001, type=float, help='Fault Rate')
 
-  parser.add_argument('-relu_clip' , '--relu_clip' , default=None   , type=float , help='Set max value for clipping relu')
-
   parser.add_argument('-c','--configuration', type=str, default=None, help='Specify a configuration file.')
   parser.add_argument('-cache','--cache', type=str, default=None, help='Specify a cache dir.')
   parser.add_argument('-results','--results', type=str, default=None, help='Specify results dir.')
@@ -62,51 +62,46 @@ def cli():
   return args
 
 def load_and_build(model, args):
-  # build the model and Theano functions.
+  # build the model 
   model.load_dataset()
 
-  if args.model == 'cifar10_vgg':
-    model.build_model(relu_clip = args.relu_clip)
-    model.compile_model()
-  else:
-    model.build_model()
-    model.compile_model()
+  model.build_model()
+  model.compile_model()
 
   if args.load_weights:
     model.load_weights(args.weight_name, absolute=True)
 
-  model.model.summary()
 
 def exp(model, args):
   load_and_build(model, args)
 
   mask     = [ True for layer in model.get_layers()]
 
-  retrain  = dl_models.transform.Retraining(layer_mask=mask)
+  #retrain  = dl_models.transform.Retraining(layer_mask=mask)
   sparsity = dl_models.transform.SummarizeSparsity(mode='both')
   distrib  = dl_models.transform.SummarizeDistribution()
 
-  retrain.config(model)
+  #retrain.config(model)
 
-  print "====================================================================="
-  print '(0) Model Topology'
-  print
+  print("=====================================================================")
+  print('(0) Model Topology')
+  print()
   for layer in model.get_layers():
-    print '  ->',layer,':',','.join([str(w.shape) for w in layer.get_weights()])
+    print('  ->',layer[0],':',layer[1].size())
 
-  print '(1) Base model'
-  print
+  print('(1) Base model')
+  print()
   err = model.eval_model()
-  print '(1) error:',err
-  print
+  print('(1) error:',err)
+  print()
   sparsity(model)
-  print '(1) sparsity:',sparsity.get_summary()
-  print
+  print('(1) sparsity:',sparsity.get_summary())
+  print()
   distrib(model)
-  print '(1) distribution:',distrib.get_summary()
-  print
+  print('(1) distribution:',distrib.get_summary())
+  print()
 
-  layer_mask = [ True for _ in model.model.layers ]
+  layer_mask = [ True for layer in model.get_layers()]
 
   random_fault_injector = dl_models.transform.RandomFault(layer_mask, seed=args.seed,
                                                           frac=args.frate,
@@ -118,19 +113,19 @@ def exp(model, args):
   random_fault_injector(model)
 
   err = model.eval_model()
-  print '(2) error after bit injection:',err
+  print('(2) error after bit injection:',err)
 
   dargs = vars(args)
-  for key in dargs.keys():
-    print "::::", key, dargs[key]
-  print "::::", "error", err
+  for key in list(dargs.keys()):
+    print("::::", key, dargs[key])
+  print("::::", "error", err)
 
 def config_setup(args):
   if args.configuration is not None:
-    print "[Conf] Using configuration from:" + args.configuration
+    print("[Conf] Using configuration from:" + args.configuration)
     Conf.load(Conf.find_config(args.configuration))
   else:
-    print "[Conf] Using default environment configuration"
+    print("[Conf] Using default environment configuration")
     Conf.set_env_default()
 
   if args.cache is not None:
@@ -146,5 +141,5 @@ if __name__=='__main__':
   model_name = args.model
   ModelClass = model_class_map[model_name]
   model = ModelClass()
-  print 'Experimenting with model: %s' % model.model_name
+  print('Experimenting with model: %s' % model.model_name)
   exp(model, args)
