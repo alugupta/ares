@@ -1,0 +1,5 @@
+FROM anibali/pytorch:cuda-8.0
+
+RUN pip install torch hickle torchtext scipy numpy_utils
+ENV CUDA_HOME "/usr/local/cuda"
+ENV PYTHONPATH "${PYTHONPATH}:/ares"

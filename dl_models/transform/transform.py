@@ -2,6 +2,8 @@
 
 from abc import abstractmethod
 import numpy as np
+import torch
+
 
 class ModelTransform(object):
   def __init__(self, layer_mask=None):
@@ -32,47 +34,49 @@ class ModelTransform(object):
         chosen_layers[0:layer_mask] = 0
     assert len(model.get_layers())==len(chosen_layers), 'Layer mask must match number of layers. ('+str(len(model.get_layers()))+' vs. '+str(len(chosen_layers))+')'
     return chosen_layers
+    
+  #Take a user-provided layer mask and convert to one that includes biases
+  def expand_mask(self, layer_mask, skip_biases, model): 
+    layers = model.get_all_layers()
+    new_mask = np.zeros(len(layers),dtype='bool')
+    j = 0
+    for i in range(len(layers)):
+        if 'bias' not in layers[i][0]:
+            new_mask[i] = layer_mask[j]
+            j += 1
+        elif not skip_biases and j > 0:   #If skipping, ignore. If not, copy the status of previous layer
+            new_mask[i] = layer_mask[j - 1]
+
+    return new_mask
+        
 
   def get_masked_layers(self, model, layer_mask=-1):
     if layer_mask is -1: # allow overriding the mask with a non-sentinel
       layer_mask = self.layer_mask
-    layers = model.get_layers()
     mask = self._generalize_layer_mask(model, layer_mask)
+    mask = self.expand_mask(mask, skip_biases, model)
+
+    layers = model.get_all_layers()
     masked_layers = [l for l,m in zip(layers,mask) if m]
     return masked_layers
 
-  def transform_layers(self, model, function, layer_mask=-1):
+  def transform_layers(self, model, function, skip_biases, layer_mask=-1):
     if layer_mask is -1: # allow overriding the mask with a non-sentinel
       layer_mask = self.layer_mask
-    layers = model.get_layers()
     mask = self._generalize_layer_mask(model, layer_mask)
+    mask = self.expand_mask(mask, skip_biases, model)
+
+    layers = model.get_all_layers()
     for l,m in zip(layers, mask):
       if m:
         v = function(l) # Must mutate the layer in-place
         assert v is None, 'Layer transform function must do their work in-place.'
     return model
 
-  def get_masked_weights(self, model, layer_mask=-1, skip_biases=True):
-    layers = self.get_masked_layers(model, layer_mask=layer_mask)
-    if skip_biases:
-      weights = [l.get_weights()[0] for l in layers]
-    else:
-      weights = [w for l in layers for w in l.get_weights()]
-    return weights
-
-  def transform_weights(self, model, function, layer_mask=-1, skip_biases=True):
+  def transform_weights(self, model, function, layer_mask=-1, skip_biases=False):
     def sub_transform(layer):
-      weights = layer.get_weights()
-      new_weights = []
-      for ii, w in enumerate(weights):
-        # skip biases for now..
-        # or not skip_biases:
-        if ii == 0:
-          new_w = function(w)
-        else:
-          new_w = w
-        new_weights.append(new_w)
-      layer.set_weights(new_weights)
+      new_weights = function(layer[1].data)
+      model.update_layer(layer, new_weights) 
       return None # Mutation is in-place
-    return self.transform_layers(model, sub_transform, layer_mask=layer_mask)
+    return self.transform_layers(model, sub_transform, skip_biases, layer_mask=layer_mask)
 

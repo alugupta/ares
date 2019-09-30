@@ -6,7 +6,9 @@ import argparse
 
 import dl_models
 
-from dl_models.models.model_configs import *
+from dl_models.transform import SummarizeSparsity
+from dl_models.transform import Retraining
+
 from dl_models.models.base import *
 
 from dl_models.models import mnistFC
@@ -14,21 +16,25 @@ from dl_models.models import mnistLenet5
 from dl_models.models import svhnLenet5
 from dl_models.models import imagenetVGG16
 from dl_models.models import imagenetResNet50
+from dl_models.models import imagenetInceptionv3
 from dl_models.models import cifar10VGG
 from dl_models.models import tidigitsGRU
-
-from dl_models.transform import SummarizeSparsity
-from dl_models.transform import Retraining
-import cProfile
+from dl_models.models import tidigitsRNN
+from dl_models.models import tidigitsLSTM
+from dl_models.models import cifar10alexnet
 
 model_class_map = {
                    'mnist_lenet5'      : mnistLenet5,
                    'mnist_fc'          : mnistFC,
                    'svhn_lenet5'       : svhnLenet5,
-                   'cifar10_vgg'       : cifar10VGG,
                    'imagenet_vgg16'    : imagenetVGG16,
                    'imagenet_resnet50' : imagenetResNet50,
+                   'cifar10_vgg'       : cifar10VGG,
                    'tidigits_gru'      : tidigitsGRU,
+                   'tidigits_rnn'      : tidigitsRNN,
+                   'tidigits_lstm'      : tidigitsLSTM,
+                   'imagenet_inceptionv3' : imagenetInceptionv3,
+                   'cifar10_alexnet'   : cifar10alexnet,
                   }
 
 def cli():
@@ -49,7 +55,6 @@ def cli():
   parser.add_argument('-sw_name', '--sw_name', default=None, type=str, \
                            help='Specify path for saving trained weights')
 
-  parser.add_argument('-l1', '--l1',      default='0.0', type=float, help='Set l1 reg penalty.')
   parser.add_argument('-l2', '--l2',      default='0.0', type=float, help='Set l2 reg penalty.')
   parser.add_argument('-dr_rt', '--dropout_rate', default='0.35', type=float, help='Dropout rate for appropriate layers.')
 
@@ -68,7 +73,7 @@ def cli():
   return args
 
 def load_and_build(model, args):
-  # build the model and Theano functions.
+  # build the model
   model.load_dataset()
   model.set_training_params(args)
 
@@ -79,9 +84,8 @@ def load_and_build(model, args):
     model.load_weights(args.weight_name)
     print('Testing loaded weights')
     err = model.eval_model()
-    print('Validation error before training', err)
+    print('Validation error before training ', err)
 
-  model.model.summary()
 
 def train_and_save(model, args):
   # if we didn't load weights, we can train a new DNN.
@@ -94,6 +98,7 @@ def train_and_save(model, args):
     model.plot_distributions()
 
   error = model.eval_model()
+  print(error)
   print('Validation error after training: %f' % error)
   error = model.test_model()
   print('Test error after training: %f' % error)
@@ -107,10 +112,10 @@ def process_model(model, args):
 
 def config_setup(args):
   if args.configuration is not None:
-    print "[Conf] Using configuration from:" + args.configuration
+    print("[Conf] Using configuration from:" + args.configuration)
     Conf.load(Conf.find_config(args.configuration))
   else:
-    print "[Conf] Using default environment configuration"
+    print("[Conf] Using default environment configuration")
     Conf.set_env_default()
 
   if args.cache is not None:
@@ -126,5 +131,5 @@ if __name__ == '__main__':
   model_name = args.model
   ModelClass = model_class_map[model_name]
   model = ModelClass()
-  print 'Training model: %s' % model.model_name
+  print('Training model: %s' % model.model_name)
   process_model(model, args)

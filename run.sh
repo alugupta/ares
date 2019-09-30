@@ -5,7 +5,10 @@ mkdir -p cache
 mkdir -p results
 
 # Training MNIST
-THEANO_FLAGS='device=gpu' python run_models.py -m mnist_fc -eps 10 -v  -to -c conf
+python3 /ares/run_models.py -m mnist_fc -eps 10 -v  -to -c /ares/conf -sw
 
 # Training CiFar
-#THEANO_FLAGS='device=gpu' python run_models.py -m cifar10_vgg -eps 10 -v  -to
+#python /ares/run_models.py -m cifar10_vgg -eps 10 -v  -to -c /ares/conf
+
+#Training SVHN
+#python /ares/run_models.py -m imagenet_resnet50 -eps 10 -v  -to -c /ares/conf

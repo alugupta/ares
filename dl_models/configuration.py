@@ -12,22 +12,22 @@ import types
 import sys
 # https://docs.python.org/2/library/json.html#py-to-json-table
 _CONVERTIBLE_VALID_TYPES = [
-  types.DictType,
-  types.TupleType,
-  types.ListType,
-  types.StringType,
-  types.UnicodeType,
-  types.IntType,
-  types.LongType,
-  types.FloatType,
-  types.BooleanType,
-  types.NoneType,
+  dict,
+  tuple,
+  list,
+  bytes,
+  str,
+  int,
+  int,
+  float,
+  bool,
+  type(None),
 ]
 
 _TEST_DEFAULTS = {
-  "results_dir": "/home/<username>/ares/results",
-  "cache_dir": "/home/<username>/ares/cache",
-  "ds_dir": "/home/<username>/ba-dls-deepspeech"
+  "results_dir": "/ares/results",
+  "cache_dir": "/ares/cache",
+  "ds_dir": "/ba-dls-deepspeech"
 }
 
 class Conf(object):
@@ -55,7 +55,7 @@ class Conf(object):
     try:
       v = cls._conf[key]
     except KeyError:
-      raise KeyError, '\'%s\' not found in configuration file \'%s\'.'%(key,cls._path)
+      raise KeyError('\'%s\' not found in configuration file \'%s\'.'%(key,cls._path))
     return v
 
   @classmethod
@@ -76,17 +76,17 @@ class Conf(object):
     for path in paths:
       if 'ares/' in path:
         if not os.path.isdir(path):
-          print "[Conf.set_env_default] ERROR: Default ares not found"
+          print("[Conf.set_env_default] ERROR: Default ares not found")
           break
         cls.set('dl_models_root', path)
 
         if not os.path.isdir(path + "/cache"):
-          print "[Conf.set_env_default] ERROR: Default ares/cache not found"
+          print("[Conf.set_env_default] ERROR: Default ares/cache not found")
           break
         cls.set('cache_dir', path + "/cache")
 
         if not os.path.isdir(path + "/results"):
-          print "[Conf.set_env_default] ERROR: Default ares/results not found"
+          print("[Conf.set_env_default] ERROR: Default ares/results not found")
           break
         cls.set('results_dir', path + "/results")
 
@@ -94,7 +94,7 @@ class Conf(object):
         break
 
     if not found_dl_models:
-      print "[Conf.set_env_default] ERROR: Could not find default ares paths "
+      print("[Conf.set_env_default] ERROR: Could not find default ares paths ")
 
   @classmethod
   def load(cls, filename):

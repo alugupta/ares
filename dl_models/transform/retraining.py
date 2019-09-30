@@ -6,19 +6,21 @@ class Retraining(ModelTransform):
     self.verbose = verbose
 
   @staticmethod
-  def set_untrainable(layer):
-    layer.trainable = False
+  def set_untrainable(layer, skip_biases):
+    if 'weight' in layer[0] or not skip_biases:    
+        layer[1].requires_grad = False
   @staticmethod
-  def set_trainable(layer):
-    layer.trainable = True
+  def set_trainable(layer, skip_biases):
+    if 'weight' in layer[0] or not skip_biases:    
+        layer[1].requires_grad = True
 
   def config(self, model):
-    self.transform_layers(model, Retraining.set_untrainable, None)
-    self.transform_layers(model, Retraining.set_trainable)
+    self.transform_layers(model, Retraining.set_untrainable, False, None)
+    self.transform_layers(model, Retraining.set_trainable, False)
     model.compile_model()
 
   def reset(self, model):
-    self.transform_layers(model, Retraining.set_trainable, None)
+    self.transform_layers(model, Retraining.set_trainable, False, None)
     model.compile_model()
 
   def __call__(self, model, config=True):
