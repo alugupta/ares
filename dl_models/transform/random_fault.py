@@ -58,7 +58,7 @@ class RandomFault(ModelTransform):
           for b in range(-1,-1*qf - 1, -1): 
             uniform, nonzero = self.rng_subsys.generate()
             if nonzero:
-                cb = 2 ** -b
+                cb = 2 ** b
                 # Isolate the value to be modified based on given bit position by shift and mod
                 fault = output / cb
                 fault.abs_().fmod_(2)
